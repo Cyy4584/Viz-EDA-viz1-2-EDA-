@@ -1,0 +1,150 @@
+---
+title: "EDA_afterclass"
+author: "Yingyu Cui"
+date: "2024-10-08"
+output: github_document
+---
+
+# Exploratory analysis using data summaries
+Conduct exploratory analyses using dplyr verbs (group_by and summarize), along with numeric data summaries
+
+```{r set up}
+library(tidyverse)
+```
+
+```{r load data}
+weather_df_EDA = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728", "USW00022534", "USS0023B17S"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2021-01-01",
+    date_max = "2022-12-31") |>
+  mutate(
+    name = case_match(
+      id, 
+      "USW00094728" ~ "CentralPark_NY", 
+      "USW00022534" ~ "Molokai_HI",
+      "USS0023B17S" ~ "Waterhole_WA"),
+    tmin = tmin / 10,
+    tmax = tmax / 10,
+    month = lubridate::floor_date(date, unit = "month")) |>
+  select(name, id, everything())
+```
+
+initial numeric exploration
+```{r histogram}
+weather_df |> 
+  ggplot(aes(x = prcp)) + 
+  geom_histogram()
+```
+some data visualization should be helpful before following explorations, if clearly skewed, we should pay attention.
+
+
+
+group_by function
+could follow by summarize function or mutate function
+```{r group_by}
+weather_df_EDA |>
+  group_by(name, month)
+```
+it is sometimes necessary to remove groups using ungroup()
+
+
+
+counting 
+ count the number of observations in each month
+```{r count}
+weather_df_EDA |>
+  group_by(month) |>
+  summarize(n_obs = n())
+```
+在 R 中，summarize() 是 dplyr 包中的一个函数，用于对数据进行汇总计算。它通常与 group_by() 一起使用，可以在分组数据的基础上计算汇总统计量，如平均值、总和、计数、最小值、最大值等
+the result is a dataframe that includes the grouping variable(s) and the desired summary.
+```{r anothor way to count}
+weather_df |>
+  count(month, name = "n_obs")
+```
+n_days = n_distinct(date) 
+n_distinct() 是 dplyr 包中的一个函数，用于计算一个向量或列中的唯一值的数量。
+换句话说，它会去重，并计算不重复的值的数量
+
+
+2X2 table
+using group_by and summarize to create a 2X2 table
+```{r 2X2 table}
+weather_df |> 
+  drop_na(tmax) |> 
+  mutate(
+    cold = case_when(
+      tmax <  5 ~ "cold",
+      tmax >= 5 ~ "not_cold",
+      TRUE      ~ ""
+  )) |> 
+  filter(name != "Molokai_HI") |> 
+  group_by(name, cold) |> 
+  summarize(count = n())
+```
+re-organize into a more standard (non-tidy) 2x2 table using pivot_wider, or you could use janitor::tabyl() to create a 2x2 table
+{r reorganise}
+janitor::tabyl(name, cold)
+
+janitor has a lot of little functions like this that turn out to be useful, so when you have some time you might read through all the things you can do. 
+
+Just do a logistic regression adjusting for confounders 
+sometimes this table is not that useful, we can directly do a logistic regression to adjust for confounders
+
+
+
+
+General summerization
+summarize() using functions like mean(), median(), var(), sd(), mad(), IQR(), min(), and max()
+indicate the variable to which they apply and include any additional arguments as necessary
+If you want to summarize multiple columns using the same summary, the across function is helpful.
+  summarize(across(tmin:prcp, mean))
+
+The fact that summarize() produces a dataframe 
+is important (and consistent with other functions in the tidyverse). You can incorporate grouping and summarizing within broader analysis pipelines.
+
+The results of group_by() and summarize() are generally tidy, but presenting reader-friendly results for this kind of exploratory analysis often benefits from some un-tidying. 
+
+using 
+pivot_wider(
+    names_from = name,
+    values_from = mean_tmax) |> 
+  knitr::kable(digits = 1)
+
+
+
+Grouped function
+group_by() and mutat() could be used 
+weather_df |>
+  group_by(name) |>
+  mutate(
+    mean_tmax = mean(tmax, na.rm = TRUE),
+    centered_tmax = tmax - mean_tmax)
+    
+
+
+Window function
+Window functions, in contrast, take n inputs and return n outputs, and the outputs depend on all the inputs. 
+There are several categories of window functions; you’re most likely to need ranking functions and offsets
+
+{r window function}
+weather_df |>
+  group_by(name, month) |>
+  mutate(temp_ranking = min_rank(tmax)) |> 
+  filter(min_rank(tmax) < 2) |> 
+  
+  desc() 是一个函数，用于对数值进行降序排序
+    filter(min_rank(desc(tmax)) < 4)
+    
+Offsets, especially lags, are used to compare an observation to it’s previous value.
+which is used for the variability of data with time changing
+or to identify the largest one-day increase
+{r offset}
+weather_df |>
+  group_by(name) |>
+  mutate(temp_change = tmax - lag(tmax))
+
+
+

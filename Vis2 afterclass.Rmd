@@ -2,7 +2,7 @@
 title: "vis2_afterclass"
 author: "Yingyu Cui"
 date: "2024-10-08"
-output: html_document
+output: github_document
 ---
 
 ```{r set up}
