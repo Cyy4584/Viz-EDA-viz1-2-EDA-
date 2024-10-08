@@ -1,5 +1,94 @@
-## StackOverflow has a lot of questions and answers.
+---
+title: "class Vis 1 onclass"
+author: "yingyu cui"
+output: "github_document"
+---
+StackOverflow has a lot of questions and answers.
 
-## graph components : geoms?  facets scales statistics 
-## what is ridge graph 
+graph components : geoms?  facets scales statistics 
+what is ridge graph 
+
+load data
+```{r}
+library(tidyverse)
+library(ggridges)
+```
+```{r}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728", "USW00022534", "USS0023B17S"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2021-01-01",
+    date_max = "2022-12-31") |>
+  mutate(
+    name = case_match(
+      id, 
+      "USW00094728" ~ "CentralPark_NY", 
+      "USW00022534" ~ "Molokai_HI",
+      "USS0023B17S" ~ "Waterhole_WA"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) |>
+  select(name, id, everything())
+```
+ make first plot
+```{r}
+ggplot(weather_df, aes(x = tmin, y = tmax)) +
+  geom_point()
+```
+make sure to subl=mit everything 
+filter(is.na()) function 
+
+aes(x=, y=, color=, )
+geom_point (alpha= tranparent= .3, size = .8)
+geom_smooth(se=FALSE)   smooth curve 
+ this is diifferent with below 
+aes(x=, y=,)
+geom_point (aes= (color=), alpha= tranparent= .3, size = .8)
+the smooth curve will become from 3 to 1 
+
+use faceting function 
+```{r}
+facet_grid(. ~ name)
+facet_grid(name ~ .)
+```
+size = prcp  the size of each point is determined by the value of prcp  
+
+
+weather_df |> 
+filter |> 
+  mutate() |> 
+  ggplot geom_smooth(method = "lm", se = FALSE) no curve line just straight one
+  
+geom_hex function
+ggplot color function 
+why color = blue turns every point red?  color = "blue" turns the color blue, with out "" not 
+
+univariable 
+ggplot(color = name/ fill = name)
+geom_histogram(position = "dodge")
+have a try 
+maybe the facet_grid fuction is better could have a try 
+
+geom_density(alpha= ) density plot 
+
+geom_boxplot()
+
+violin plots 
+geom_violin()
+
+reorder function 
+
+ridge plot 
+geom_density_ridges() in library(ggridges)  need to install the library first
+bimodal or monomoal 
+
+filter function 
+
+save and embed plots
+ggsave("filename.XXX", the poltname above, width = ,height = )
+
+
+embed picture 
+fig.width fig.asp
+how to change the size of the picture 
 

@@ -1,0 +1,168 @@
+---
+title: "class_vis1_afterclass"
+author: "Yingyu Cui"
+date: "2024-10-07"
+output: github_document
+---
+
+```{r set up}
+library(tidyverse)
+library(ggridges)
+```
+```{r download and create weather data frame}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728", "USW00022534", "USS0023B17S"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2021-01-01",
+    date_max = "2022-12-31") |>
+  mutate(
+    name = case_match(
+      id, 
+      "USW00094728" ~ "CentralPark_NY", 
+      "USW00022534" ~ "Molokai_HI",
+      "USS0023B17S" ~ "Waterhole_WA"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) |>
+  select(name, id, everything())
+view(weather_df)
+```
+
+Begin with scatterplot
+```{r}
+weather_df |>
+ggplot(aes(x = tmin, y = tmax)) + 
+  geom_point()
+```
+```{r scatterplot with pipe function}
+weather_df |>
+  ggplot(aes(x = tmin, y = tmax)) + 
+  geom_point()
+```
+
+another way to plot
+```{r another way to plot}
+ggp_weather = 
+  weather_df |>
+  ggplot(aes(x = tmin, y = tmax)) 
+
+ggp_weather + geom_point()
+```
+
+name function
+```{r name function}
+ggplot(weather_df, aes(x = tmin, y = tmax)) + 
+  geom_point(aes(color = name))
+```
+smooth curve and point transparent
+```{r smooth curve and point transparent}
+ggplot(weather_df, aes(x = tmin, y = tmax)) + 
+  geom_point(aes(color = name), alpha = .5) +
+  geom_smooth(se = FALSE)
+```
+where to place the name function and facet grid
+note the place of "coler=name" which determine whether the color of lines are defferent by name.
+facet_grid(.~ name)---vertical graphs by name, facet_grid(name ~ .)---horizontal graphs by name
+```{r where to place the name function and facet grid}
+ggplot(weather_df, aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(alpha = .5) +
+  geom_smooth(se = FALSE) + 
+  facet_grid(. ~ name)
+```
+geom_plot size function
+```{r geom_plot size function}
+ggplot(weather_df, aes(x = date, y = tmax, color = name)) + 
+  geom_point(aes(size = prcp), alpha = .5) +
+  geom_smooth(se = FALSE) + 
+  facet_grid(. ~ name)
+```
+
+assessment:
+```{r assessment}
+weather_df |> 
+  filter(name == "CentralPark_NY") |>
+  mutate(tmin = tmin * 9/5 + 32, tmax = tmax * 9/5 + 32) |>
+  ggplot(aes(x = tmin, y = tmax)) +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+geom_hex() function 
+visualization when number of data is too big and scatterplot is not clear when using transparency function
+geom_bin2d(), or geom_density2d() can be used as well
+```{r geom_hex() function}
+ggplot(weather_df, aes(x = tmax, y = tmin)) + 
+  geom_hex()
+```
+
+difference between these: one is regulate the coler of points, the other is to create a new varable
+```{r difference between}
+ggplot(weather_df) + geom_point(aes(x = tmax, y = tmin), color = "blue")
+ggplot(weather_df) + geom_point(aes(x = tmax, y = tmin, color = "blue"))
+```
+
+univariable
+geom_histogram()function
+attention: fill = name not color = name
+```{r univariable histogram}
+ggplot(weather_df, aes(x = tmax)) + 
+  geom_histogram()
+```
+more aesthetics: dodge make sorting not overlapping 
+```{r more aesthetics}
+ggplot(weather_df, aes(x = tmax, fill = name)) + 
+  geom_histogram(position = "dodge", binwidth = 2)
+```
+The position = "dodge" places the bars for each group side-by-side, but this gets sort of hard to understand. I often prefer density plots in place of histograms.
+```{r density plots}
+ggplot(weather_df, aes(x = tmax, fill = name)) + 
+  geom_density(alpha = .4, adjust = .5, color = "blue")
+```
+adjust is like binwidth, but for density plots. 
+ You could facet by name as above but would have to ask if that makes comparisons easier or harder.
+
+add geom_rug() for better show raw data in addition to density plot
+show the distribution situation of raw data
+```{r geom_rug()}
+ggplot(weather_df, aes(x = tmax, fill = name)) + 
+  geom_density(alpha = .4, adjust = .5, color = "blue") +
+  geom_rug()
+```
+
+Histograms and densities are one way of investigating univariate distributions; boxplots are another.
+```{r boxplots}
+ggplot(weather_df, aes(x = name, y = tmax)) + 
+  geom_boxplot()
+```
+
+Violin plots are a combination of boxplots and density plots.
+stat_summary() could add some information on the plot
+```{r violin plots}
+ggplot(weather_df, aes(x = name, y = tmax)) + 
+  geom_violin(aes(fill = name), alpha = .5) + 
+  stat_summary(fun = "median", color = "blue")
+```
+
+ if you have lots of categories in which the shape of the distribution matters---- ridge plot 
+```{r ridge plot}
+ggplot(weather_df, aes(x = tmax, y = name)) + 
+  geom_density_ridges(scale = .85)
+```
+
+use ggsave() by explicitly creating the figure and exporting
+(using relative paths!).
+ggsave("ggp_weather.pdf", ggp_weather(or path = relative path), width = 8, height = 5)
+
+### **`out.width` 和 `fig.width` 的区别**：
+- **`fig.width` 和 `fig.height`**：
+  - 这些参数设置的是图形**在生成时**的实际尺寸，影响的是图形的分辨率。
+  - 设置较大的 `fig.width` 和 `fig.height` 可以生成更高分辨率的图形。
+
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+can be inserted in the beginning of the Rmd file.
+
+
+What makes embedding figures difficult at first is that things like the font and point size in the figures generated by R are constant – that is, they don’t scale with the overall size of the figure. As a result, text in a figure with width 12 will look smaller than text in a figure with width 6 after both have been embedded in a document.
